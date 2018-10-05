@@ -64,24 +64,24 @@ def err(msg, extra=None):
     log('ERR', msg, extra)
 
 def log(sev, msg, extra):
-    print '%s: %s' % (sev, msg)
+    print('%s: %s' % (sev, msg))
     if extra is not None:
-        print '\t%s' % str(extra)
+        print('\t%s' % str(extra))
 
 def print_hr():
-    print '-' * 70
+    print('-' * 70)
 
 def test_name(name):
-    print '%s %s %s' % ('*' * 10, name, '*' * 10)
+    print('%s %s %s' % ('*' * 10, name, '*' * 10))
 
 def check_product(sys_props):
     product_props = {}
-    for k in sys_props.keys():
+    for k in list(sys_props.keys()):
         if PRODUCT_PROP in k:
             product_props[k] = sys_props[k]
 
     info('Product info:')
-    for k in product_props.keys():
+    for k in list(product_props.keys()):
         info('\t%s=%s' % (k, product_props[k]))
             
 def check_build(sys_props):
@@ -105,7 +105,7 @@ def check_signing_keys(sys_props):
 def check_factory_mode(sys_props):
     test_name('Factory mode check')
 
-    if FACTORY_MODE_PROP in sys_props.keys():
+    if FACTORY_MODE_PROP in list(sys_props.keys()):
         factory_mode = sys_props[FACTORY_MODE_PROP]
         if factory_mode == "1":
             warn("factory mode is on")
@@ -127,7 +127,7 @@ def check_selinux():
     p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     res = p.communicate()
     if p.returncode != 0:
-        print 'Error: rc=%d, msg=%s' % (p.returncode, res[1])
+        print('Error: rc=%d, msg=%s' % (p.returncode, res[1]))
 
     selinux_mode = res[0].splitlines()[0].strip()
     if selinux_mode != SELINUX_ENFORCING:
@@ -150,13 +150,13 @@ def check_bt(sys_props):
 
     bt_props = {}
     bt_on = False
-    for k in sys_props.keys():
+    for k in list(sys_props.keys()):
         if QCOM_BT_PROP in k:
            val = sys_props[k]
            if val == 'true':
               bt_props[k] = val
 
-    if len(bt_props.keys()) > 0:
+    if len(list(bt_props.keys())) > 0:
         warn('Bluetooth profiles are on by default', bt_props)
 
 def check_usb(sys_props):
@@ -175,24 +175,24 @@ def check_3g(sys_props):
     test_name('3G/LTE check')
 
     gsm_props = {}
-    if GSM_NW_PROP in sys_props.keys():
+    if GSM_NW_PROP in list(sys_props.keys()):
         gsm_nw = sys_props[GSM_NW_PROP]
         if gsm_nw != '':
-            for k in sys_props.keys():
+            for k in list(sys_props.keys()):
                 if 'gsm.' in k:
                     gsm_props[k] = sys_props[k]
-                    
+    
     mDataRegState_command="adb shell dumpsys telephony.registry | grep mServiceState"
     mDataRegState_output=exec_command(mDataRegState_command)[0]
     cell_connection_state=""
-    
-    if "mServiceState=" in mDataRegState_output:
-	    cell_connection_state=mDataRegState_output.split("mDataRegState=")[1].split("mVoiceRoamingType")[0]
-	
+    connection_data=mDataRegState_output.decode("utf-8")
+    if "mServiceState=" in connection_data:
+	    cell_connection_state=connection_data.split("mDataRegState=")[1].split("mVoiceRoamingType")[0]
+		        
     if gsm_props:
         warn('3G/LTE may be enabled', gsm_props)
-    if "IN_SERVICE" in cell_connection_state:
-        warn("Data is enabled and active.")
+    if "STATE_IN_SERVICE" in cell_connection_state:
+        warn("Data is enabled")
         print(cell_connection_state)
 def is_private_ip(ipaddr):
     f = struct.unpack('!I', socket.inet_pton(socket.AF_INET, ipaddr))[0]
@@ -214,16 +214,16 @@ def check_net_ifs():
 
     curr_net_if = None
     for line in lines:
-        m = NET_IF_RE.match(line)
+        m = NET_IF_RE.match(line.decode('utf-8'))
         if m is not None:
             current_net_if = m.group(1)
-        m = IP_ADDR_RE.match(line)
+        m = IP_ADDR_RE.match(line.decode('utf-8'))
         if m is not None:
             ip_addr = m.group(1)
             if current_net_if is not None:
                 net_ifs[current_net_if] = ip_addr
     
-    for net_if in net_ifs.keys():
+    for net_if in list(net_ifs.keys()):
         ip = net_ifs[net_if]
         if not is_private_ip(ip):
             warn('Found non-private IP address.', '%s: %s' % (net_if, ip))
@@ -236,7 +236,7 @@ def check_port_listen():
     cmd = 'adb shell "netstat -na|grep -i tcp|grep -i listen"'
     lines = exec_command(cmd, False)
     for line in lines:
-        m = NETSTAT_RE.match(line)
+        m = NETSTAT_RE.match(line.decode('utf-8'))
         if m is not None:
             service = m.group(1)
             if '127.0.0.1' not in service:
@@ -249,7 +249,7 @@ def check_adb_auth():
     test_name('ADB authentication check')
 
 
-    if ADB_VENDOR_KEYS_ENV not in os.environ.keys():
+    if ADB_VENDOR_KEYS_ENV not in list(os.environ.keys()):
         info('no ADB vendor key set')
         return
 
@@ -264,7 +264,7 @@ def check_adb_auth():
         cmd = 'adb devices'
         lines = exec_command(cmd)
         for line in lines:
-            m = ADB_DEVICES_RE.match(line)
+            m = ADB_DEVICES_RE.match(line.decode('utf-8'))
             if m is not None:
                 device = m.group(1)
                 state = m.group(2)
@@ -298,19 +298,19 @@ def check_services():
 
     services = {}
     for line in lines:
-        m = SERVICE_RE.match(line)
+        m = SERVICE_RE.match(line.decode('utf-8'))
         if m is not None:
             services[m.group(1).strip()] = m.group(2).strip()
 
     custom_services = {}
-    for s in services.keys():
+    for s in list(services.keys()):
         iface = services[s] 
         if iface and 'android' not in iface:
             custom_services[s] = iface
 
     if custom_services:
         warn('Found custom Android services')
-        for cs in custom_services.keys():
+        for cs in list(custom_services.keys()):
             if cs not in ANDROID_CORE_SERVICES:
                 warn('\t%s: [%s]' % (cs, custom_services[cs]))
 
@@ -318,9 +318,9 @@ def check_fde(sys_props):
     test_name('Disk encryption (FDE) check')
 
     crypto_props = {}
-    if CRYPTO_STATE_PROP in sys_props.keys():
+    if CRYPTO_STATE_PROP in list(sys_props.keys()):
         state = sys_props[CRYPTO_STATE_PROP]
-        for k in sys_props.keys():
+        for k in list(sys_props.keys()):
             if CRYPTO_PROPS in k:
                 crypto_props[k] = sys_props[k]
         if state == 'encrypted':
@@ -347,12 +347,12 @@ def collect_sys_props():
     p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     res = p.communicate()
     if p.returncode != 0:
-        print 'Error: rc=%d, msg=%s' % (p.returncode, res[1])
+        print('Error: rc=%d, msg=%s' % (p.returncode, res[1]))
     
     props = {}
     lines = res[0].splitlines()
     for line in lines:
-        m = SYS_PROP_RE.match(line)
+        m = SYS_PROP_RE.match(line.decode('utf-8'))
         if m is not None:
            props[m.group(1).strip()] = m.group(2).strip() 
 
@@ -396,7 +396,7 @@ def main():
     print_hr()
     check_adb_auth()
     print_hr()
-    print
+    print()
 
 if __name__ == '__main__':
     main()
