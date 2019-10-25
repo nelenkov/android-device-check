@@ -5,7 +5,6 @@ import re
 import socket
 import struct
 import subprocess
-import sys
 
 SYS_PROP_RE = re.compile(r'^\[(\S+)\]: \[(\S+)\].*')
 NETSTAT_RE = re.compile(r'^\S+\s+\S+\s+\S+\s+(\S+)\s+.*')
@@ -45,34 +44,41 @@ ADB_AUTHORIZED = 'device'
 ADB_VENDOR_KEYS_ENV = 'ADB_VENDOR_KEYS'
 
 PRIVATE_NETS = (
-               ['127.0.0.0', '255.0.0.0'],
-               ['192.168.0.0', '255.255.0.0'],
-               ['172.16.0.0', '255.240.0.0'],
-               ['10.0.0.0', '255.0.0.0']
-               )
+    ['127.0.0.0', '255.0.0.0'],
+    ['192.168.0.0', '255.255.0.0'],
+    ['172.16.0.0', '255.240.0.0'],
+    ['10.0.0.0', '255.0.0.0']
+)
 
 # core services that don't have 'android' in the interface name only
 ANDROID_CORE_SERVICES = ('drm.drmManager', 'mount')
 
+
 def warn(msg, extra=None):
     log('WARN', msg, extra)
+
 
 def info(msg, extra=None):
     log('INFO', msg, extra)
 
+
 def err(msg, extra=None):
     log('ERR', msg, extra)
+
 
 def log(sev, msg, extra):
     print '%s: %s' % (sev, msg)
     if extra is not None:
         print '\t%s' % str(extra)
 
+
 def print_hr():
     print '-' * 70
 
+
 def test_name(name):
     print '%s %s %s' % ('*' * 10, name, '*' * 10)
+
 
 def check_product(sys_props):
     product_props = {}
@@ -83,7 +89,8 @@ def check_product(sys_props):
     info('Product info:')
     for k in product_props.keys():
         info('\t%s=%s' % (k, product_props[k]))
-            
+
+
 def check_build(sys_props):
     test_name('Build props check')
 
@@ -92,6 +99,7 @@ def check_build(sys_props):
 
     if TYPE_USERDEBUG in build_type or TYPE_USERDEBUG in build_flavor:
         warn('userdebug build', (build_type, build_flavor))
+
 
 def check_signing_keys(sys_props):
     test_name('Signing keys check')
@@ -102,6 +110,7 @@ def check_signing_keys(sys_props):
     if TEST_KEYS in fingerprint or TEST_KEYS in build_tags:
         warn('build is signed with test-keys', (fingerprint, build_tags))
 
+
 def check_factory_mode(sys_props):
     test_name('Factory mode check')
 
@@ -109,6 +118,7 @@ def check_factory_mode(sys_props):
         factory_mode = sys_props[FACTORY_MODE_PROP]
         if factory_mode == "1":
             warn("factory mode is on")
+
 
 def exec_command(cmd, ignore_err=False):
     p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -119,6 +129,7 @@ def exec_command(cmd, ignore_err=False):
             return []
 
     return res[0].splitlines()
+
 
 def check_selinux():
     test_name('SELinux check')
@@ -133,43 +144,46 @@ def check_selinux():
     if selinux_mode != SELINUX_ENFORCING:
         warn('SELinux not in enforcing mode', selinux_mode)
 
+
 def check_debug(sys_props):
     test_name('Debuggable apps check')
 
     secure = sys_props[SECURE_PROP]
     debuggable = sys_props[DEBUGGABLE_PROP]
-    
+
     if secure == '0':
-       warn('Build is not secure', '%s=%s' % (SECURE_PROP, secure)) 
+        warn('Build is not secure', '%s=%s' % (SECURE_PROP, secure))
 
     if debuggable == '1':
         warn('Build is debuggable', '%s=%s' % (DEBUGGABLE_PROP, debuggable))
+
 
 def check_bt(sys_props):
     test_name('Bluetooth modes check')
 
     bt_props = {}
-    bt_on = False
     for k in sys_props.keys():
         if QCOM_BT_PROP in k:
-           val = sys_props[k]
-           if val == 'true':
-              bt_props[k] = val
+            val = sys_props[k]
+            if val == 'true':
+                bt_props[k] = val
 
     if len(bt_props.keys()) > 0:
         warn('Bluetooth profiles are on by default', bt_props)
+
 
 def check_usb(sys_props):
     test_name('USB modes check')
 
     usb_config = sys_props[USB_CONFIG_PROP].split(',')
     usb_state = sys_props[USB_STATE_PROP].split(',')
-   
+
     if len(usb_config) > 1 and usb_config[0] != 'adb':
         warn('Multiple USB modes configured.', '%s=%s' % (USB_CONFIG_PROP, usb_config))
 
     if len(usb_state) > 1 and usb_state[0] != 'adb':
         warn('Multiple USB modes enabled.', '%s=%s' % (USB_STATE_PROP, usb_config))
+
 
 def check_3g(sys_props):
     test_name('3G/LTE check')
@@ -185,6 +199,7 @@ def check_3g(sys_props):
     if gsm_props:
         warn('3G/LET may be enabled', gsm_props)
 
+
 def is_private_ip(ipaddr):
     f = struct.unpack('!I', socket.inet_pton(socket.AF_INET, ipaddr))[0]
     for net in PRIVATE_NETS:
@@ -195,6 +210,7 @@ def is_private_ip(ipaddr):
 
     return False
 
+
 def check_net_ifs():
     test_name('Network interface check')
 
@@ -203,7 +219,7 @@ def check_net_ifs():
 
     net_ifs = {}
 
-    curr_net_if = None
+    current_net_if = None
     for line in lines:
         m = NET_IF_RE.match(line)
         if m is not None:
@@ -213,12 +229,13 @@ def check_net_ifs():
             ip_addr = m.group(1)
             if current_net_if is not None:
                 net_ifs[current_net_if] = ip_addr
-    
+
     for net_if in net_ifs.keys():
         ip = net_ifs[net_if]
         if not is_private_ip(ip):
             warn('Found non-private IP address.', '%s: %s' % (net_if, ip))
         info('Found network interface:', '%s: %s' % (net_if, ip))
+
 
 def check_port_listen():
     test_name('Listening TCP services check')
@@ -235,10 +252,10 @@ def check_port_listen():
 
     if services:
         warn('Non local TCP servers found', services)
-       
+
+
 def check_adb_auth():
     test_name('ADB authentication check')
-
 
     if ADB_VENDOR_KEYS_ENV not in os.environ.keys():
         info('no ADB vendor key set')
@@ -268,6 +285,7 @@ def check_adb_auth():
         cmd = 'adb kill-server'
         exec_command(cmd, True)
 
+
 def check_suid():
     test_name('SUID binaries check')
 
@@ -275,11 +293,12 @@ def check_suid():
     lines = exec_command(cmd, True)
     suid_files = []
     for line in lines:
-        if not 'Permission denied' in line:
+        if 'Permission denied' not in line:
             suid_files.append(line.strip())
 
     if len(suid_files) > 0:
         warn("SUID binaries found", suid_files)
+
 
 def check_services():
     test_name('AIDL services check')
@@ -295,7 +314,7 @@ def check_services():
 
     custom_services = {}
     for s in services.keys():
-        iface = services[s] 
+        iface = services[s]
         if iface and 'android' not in iface:
             custom_services[s] = iface
 
@@ -304,6 +323,7 @@ def check_services():
         for cs in custom_services.keys():
             if cs not in ANDROID_CORE_SERVICES:
                 warn('\t%s: [%s]' % (cs, custom_services[cs]))
+
 
 def check_fde(sys_props):
     test_name('Disk encryption (FDE) check')
@@ -321,10 +341,11 @@ def check_fde(sys_props):
     else:
         warn('userdata is NOT encrypted')
 
+
 def check_verity(sys_props):
     test_name('dm-verity check')
 
-    if not VERITY_MODE_PROP in sys_props:
+    if VERITY_MODE_PROP not in sys_props:
         warn('dm-verity is NOT enabled')
     else:
         verity_mode = sys_props[VERITY_MODE_PROP]
@@ -333,22 +354,23 @@ def check_verity(sys_props):
         else:
             warn('dm-verity is enabled but NOT enforcing', '%s=%s' % (VERITY_MODE_PROP, verity_mode))
 
+
 def collect_sys_props():
     cmd = 'adb shell getprop'
     p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     res = p.communicate()
     if p.returncode != 0:
         print 'Error: rc=%d, msg=%s' % (p.returncode, res[1])
-    
+
     props = {}
     lines = res[0].splitlines()
     for line in lines:
         m = SYS_PROP_RE.match(line)
         if m is not None:
-           props[m.group(1).strip()] = m.group(2).strip() 
+            props[m.group(1).strip()] = m.group(2).strip()
 
     return props
-        
+
 
 def main():
     sys_props = collect_sys_props()
@@ -388,6 +410,7 @@ def main():
     check_adb_auth()
     print_hr()
     print
+
 
 if __name__ == '__main__':
     main()
