@@ -34,6 +34,7 @@ CRYPTO_PROPS = 'ro.crypto.'
 VERITY_MODE_PROP = 'ro.boot.veritymode'
 
 TYPE_USERDEBUG = 'userdebug'
+TYPE_ENG = 'eng'
 TEST_KEYS = 'test-keys'
 
 SELINUX_ENFORCING = 'Enforcing'
@@ -99,6 +100,9 @@ def check_build(sys_props):
 
     if TYPE_USERDEBUG in build_type or TYPE_USERDEBUG in build_flavor:
         warn('userdebug build', (build_type, build_flavor))
+
+    if TYPE_ENG in build_type or TYPE_ENG in build_flavor:
+        warn('eng build', (build_type, build_flavor))
 
 
 def check_signing_keys(sys_props):
