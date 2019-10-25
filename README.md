@@ -4,17 +4,18 @@ A set of scripts to check Android device security configuration.
 
 ##  Device runtime configuration check 
 
-The ```check-device-props.py``` scripts check security configuration based on system properties 
+The ```check-device-props.py``` script checks security configuration based on system properties 
 and some basic system commands.
 
 ### Requirements
 
-Requires ADB connection. Set ```ANDROID_SERIAL``` and/or ```ADB_VENDOR_KEYS``` if more than one device or 
-if ADB authentication is required.
+Requires ADB connection. 
+Set ```ANDROID_SERIAL``` and/or ```ADB_VENDOR_KEYS``` if more than one device is connected to host, 
+or if ADB authentication is required.
 
 ### Major checks:
 
-* build type (userdebug, user)
+* build type (userdebug, user, eng)
 * signing keys
 * SELinux availability and mode
 * debugging-related properties
@@ -27,7 +28,7 @@ if ADB authentication is required.
 * SUID binaries
 * AIDL services
 * disk encryption (FDE/FBE) availability
-* dm-verity availability
+* dm-verity availability and mode
 
 ### Usage
 
@@ -56,7 +57,7 @@ This script does not attempt to perform static analysis of executable code.
 The following assumptions are made:
 
 * device software is based on AOSP
-* vendor components all live under the same top-level package
+* device vendor components/apps all live under the same top-level package
 * system APKs from `system/` and `system-priv/` are accessible 
  (either by downloading from live device or from build output)
  
@@ -64,8 +65,8 @@ The following assumptions are made:
  
 The following security configuration is tested:
 
-* usage of shared user ID, esp. 'android.uid.system'
-* whether 3rd-party (non-AOSP, not under top-level package) are running as 'android.uid.system'
+* usage of shared user ID, esp. `android.uid.system`
+* whether 3rd-party (non-AOSP, not under top-level package) are running as `android.uid.system`
 * debuggable applications
 * whether custom (not defined in AOSP) permissions are signature-protected
 * whether protected broadcasts are used
@@ -85,8 +86,8 @@ The following security configuration is tested:
   $ ./download-apks.py apks/
  ```
 2. Run the `check-system-apps.py` script against the APK directory from 1. 
+ * (optional) specify the `--show-apk-details` flag to show permissions and components declared in each APK.
 ```bash
    ./check-system-apps.py apks/ com.example.package
 ```
-3. Report is output to stdout, redirect as needed.
-4. Optionally, specify the `--show-apk-details` flag to show permissions and components declared in each APK.
+3. Report is output to stdout, redirect as needed. 
